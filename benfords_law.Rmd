@@ -1,0 +1,62 @@
+---
+title: "AM115 Exercise 1"
+author: "Ali Crump"
+date: "2/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(janitor)
+library(benford.analysis)
+library(gt)
+```
+
+
+```{r}
+papop2 <- melt_csv("PEP_2018_PEPANNRES_with_ann.csv") %>% 
+  filter(data_type == "integer")
+papop2$row_num <- seq.int(nrow(papop2))
+papop2 <- papop2 %>% 
+  select(value, row_num) %>% 
+  mutate(value = as.numeric(value))
+```
+
+```{r}
+x <- extract.digits(papop2$value, number.of.digits = 1) %>% 
+  group_by(data.digits) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(percent = n / sum(n))
+```
+
+
+```{r}
+x %>% 
+  select(data.digits,percent) %>% 
+  mutate(percent = round(percent, digits=2)) %>% 
+  gt() %>% 
+  tab_header(title = "Benford's Law", 
+             subtitle = "PA County Populations") %>% 
+  cols_label(
+    data.digits = "First Digit",
+    percent = "Percent"
+  )
+  
+```
+
+
+```{r}
+x %>% 
+  ggplot(aes(x = data.digits, y = percent)) +
+  geom_col() +
+  labs(x = "First Digit", y = "Percent", title = "Pennsylvania County Populations", subtitle = "Benford's Law") +
+  scale_x_continuous(breaks = c(1:9)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank())
+
+```
+
+
+
