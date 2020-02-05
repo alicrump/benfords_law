@@ -13,21 +13,66 @@ library(benford.analysis)
 library(gt)
 ```
 
+### 1. Hardy-Weinberg
+
+##### c. 
 
 ```{r}
-papop2 <- melt_csv("PEP_2018_PEPANNRES_with_ann.csv") %>% 
+p <- 0.1
+q <- 0.2
+r <- 0.5
+
+dominant <- 1:100
+carrier <- 1:100
+recessive <- 1:100
+
+dominant[1] <- 0.1
+carrier[1] <- 0.4
+recessive[1] <- 0.5
+
+for(i in 1:99 ){
+  p <- ((p+q)^2) / ((p+2*q)^2)
+  q <- (2*q*(p+q)) / ((p+2*q)^2)
+  r <- (q^2) / ((p+2*q)^2)
+  dominant[i+1] <- p
+  carrier[i+1] <- 2*q
+  recessive[i+1] <- r
+}
+
+a <- cbind(dominant,carrier,recessive)
+```
+
+
+```{r}
+a %>% 
+  as.data.frame(a) %>% 
+  ggplot(aes(x = 1:100)) +
+  geom_point(aes(y = dominant, color = "p")) +
+  geom_point(aes(y = carrier, color = "2q")) +
+  geom_point(aes(y = recessive, color = "r")) +
+  labs(x = "Generation", y = "Genotype abundance", title = "100 Generations of AA, Aa, and aa Genotypes for a lethal disease") 
+```
+
+### 2. Benford's Law
+
+I'm from Pennsylvania so I decided to look at the data set containing Pennsylvania county populations over the past 10 years. I got the data from [census.gov](https://factfinder.census.gov/faces/tableservices/jsf/pages/productview.xhtml?src=bkmk). The data appears to generally follow Benford's law, with 1 occurring about 25% of the time and 9 about 2% of the time. I was a bit suprised to see that 4 was the first digit more often than 1 (26%). This could be explained by the fact that Allegheny County and Philadelphia County are the only counties with more than 1 million residents. Other counties in Pennsylvania are much smaller, as there aren't really any other major cities in Pennsylvania, and counties less than 20,000 are very small for really any state.
+```{r}
+papop <- melt_csv("PEP_2018_PEPANNRES_with_ann.csv") %>% 
   filter(data_type == "integer")
-papop2$row_num <- seq.int(nrow(papop2))
-papop2 <- papop2 %>% 
+papop$row_num <- seq.int(nrow(papop))
+papop <- papop %>% 
   select(value, row_num) %>% 
   mutate(value = as.numeric(value))
 ```
 
 ```{r}
-x <- extract.digits(papop2$value, number.of.digits = 1) %>% 
+# Extract the first digit of the population
+x <- extract.digits(papop$value, number.of.digits = 1) %>%
+  # Count the number of times each digit appears
   group_by(data.digits) %>% 
   count() %>% 
   ungroup() %>% 
+  # Calculate the percentage of times each number appears
   mutate(percent = n / sum(n))
 ```
 
@@ -49,11 +94,16 @@ x %>%
 
 ```{r}
 x %>% 
+  # Make bar graph with digit on x and percent it appears on y 
   ggplot(aes(x = data.digits, y = percent)) +
   geom_col() +
+  # Add labels
   labs(x = "First Digit", y = "Percent", title = "Pennsylvania County Populations", subtitle = "Benford's Law") +
+  # Add x axis ticks
   scale_x_continuous(breaks = c(1:9)) +
+  # Get rid of gray background
   theme_bw() +
+  # Get rid of gridlines
   theme(panel.grid.major = element_blank())
 
 ```
